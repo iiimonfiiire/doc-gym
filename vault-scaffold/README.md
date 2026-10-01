@@ -44,12 +44,17 @@ Settings → Hotkeys → search `Doc Gym`:
 
 ## Mobile
 
-Same two commands, no keyboard:
+Templater lists two commands per template, Create and Insert. You only need two of the four:
 
-- **Toolbar (best):** Settings → Toolbar → add the two commands above. They appear above the keyboard while you edit.
-- **Command palette:** swipe down in a note, type `Doc Gym`.
+| Action | How | Command it runs |
+|---|---|---|
+| New workout | Tap **🏋️ New workout** on the [[Doc Gym/Dashboard\|Dashboard]] | `Create …/new-workout` |
+| Grade | Open the workout, tap into the text, then the toolbar button | `Insert …/evaluation-template` |
 
-Away from home, connect your VPN first if the server is only reachable through it.
+- **Set up the grade button once:** Settings → Toolbar → add `Templater: Insert Doc Gym/Templates/evaluation-template.md`. The toolbar appears above the keyboard while you edit, which is when you finish a draft.
+- **Ignore** `Insert …/new-workout` and `Create …/evaluation-template`.
+- The focus picker shows which workouts are **ready** (instant) and which are **preparing** (about 3 minutes). Picking one that's still preparing gives you a message right away instead of a long wait, and moves it to the front of the queue.
+- Away from home, connect your VPN first if the server is only reachable through it.
 
 ## Settings
 
@@ -63,6 +68,6 @@ The templates read `Doc Gym/.doc-gym.json` (hidden, synced with the vault). It h
   - Restart it on the server: `systemctl --user restart doc-gym`. Logs: `journalctl --user -u doc-gym -n 50`.
 - **"Missing or wrong Doc Gym token".** Rerun `./install.sh`, then `./ops/deploy-server.sh`. The token in `.env` on both machines must match `.doc-gym.json`.
 - **"The model returned too little to work with".** Small models sometimes produce thin output. Run it again.
-- **A workout took minutes instead of seconds.** The server keeps one ready workout per focus and makes a new one in the background after each use (about 2–3 minutes). Two workouts of the same focus in a row means the second one is generated live.
+- **"No … workout is ready yet".** The server keeps one ready workout per focus and makes a new one in the background after each use (about 3 minutes each). Pick a focus marked ready, or try again in a few minutes. When the buffer starts empty (first install, or after a prompt update), all four take about 12 minutes to fill.
 - **"The draft is empty or under 20 words".** Write under `## Draft` and delete the placeholder comment.
 - **"The note changed while grading".** You typed during grading. Run it again.

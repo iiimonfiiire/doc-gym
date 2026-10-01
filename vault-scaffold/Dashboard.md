@@ -4,7 +4,16 @@ cssclasses: [doc-gym-dashboard]
 ---
 # 🏋️ Doc Gym
 
-New workout: **⌘⌥G** · Grade the open workout: **⌘⌥E** · Setup: [[Doc Gym/README|README]]
+```dataviewjs
+// One tap on mobile. Runs the same Templater command as ⌘⌥G on desktop.
+const id = "templater-obsidian:create-Doc Gym/Templates/new-workout.md";
+const btn = dv.el("button", "🏋️ New workout");
+btn.onclick = () => app.commands.commands[id]
+  ? app.commands.executeCommandById(id)
+  : new Notice("Doc Gym: Templater hotkey target missing. Run install.sh on your desktop.");
+```
+
+Desktop: new workout **⌘⌥G** · grade the open workout **⌘⌥E** · Mobile: tap the button above; grade from the editing toolbar. Setup: [[Doc Gym/README|README]]
 
 ```dataviewjs
 const pages = dv.pages('"Doc Gym/Prompts" or "Doc Gym/Submissions"')

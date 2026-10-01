@@ -3,15 +3,17 @@
 (desktop or mobile) can generate and grade workouts. The service never touches the vault: Obsidian sends and
 receives note text, and does all reading and writing itself.
 
-  GET  /health                          -> {"ok": true, "ready": [focus, ...]}
-  POST /generate {"intensity","focus"}  -> {"stem", "content", "buffered"}
-  POST /evaluate {"content"}            -> {"content", "grade", "score"}
+  GET  /health                                   -> {"ok", "buffer", "ready": [focus, ...]}
+  POST /generate {"intensity","focus"[,"wait"]}  -> {"stem", "content", "buffered"}
+  POST /evaluate {"content"}                     -> {"content", "grade", "score"}
 
 POST requests need `Authorization: Bearer $DOC_GYM_TOKEN`.
 
 Generating a workout takes minutes on a small CPU server, so the service keeps one
 pre-generated workout per focus (on disk, so it survives restarts) and refills it in the
-background after each use. Set DOC_GYM_BUFFER=0 to turn this off.
+background after each use. If the requested focus isn't ready, /generate answers 503 at
+once and refills that focus next; pass "wait": true to generate live instead (desktop
+tools). Mobile apps drop requests that take minutes. Set DOC_GYM_BUFFER=0 to turn this off.
 """
 from __future__ import annotations
 
@@ -45,6 +47,7 @@ class WorkoutBuffer:
         self.lock = threading.Lock()
         self.wake = threading.Event()
         self.items: dict[str, dict] = {}
+        self.wanted: list[str] = []
         try:
             saved = json.loads(path.read_text())
             if saved.get("version") == PROMPT_VERSION:
@@ -79,12 +82,25 @@ class WorkoutBuffer:
             self._save()
         return True
 
+    def request(self, focus: str) -> None:
+        """Someone asked for a focus that isn't ready: refill it next."""
+        with self.lock:
+            if focus in self.wanted:
+                self.wanted.remove(focus)
+            self.wanted.insert(0, focus)
+        self.wake.set()
+
+    def _next_missing(self) -> str | None:
+        with self.lock:
+            order = self.wanted + [f for f in FOCUS if f not in self.wanted]
+            return next((f for f in order if f not in self.items), None)
+
     def run(self) -> None:
-        """Refill loop. Generates missing focuses one at a time. The model lock is taken per
-        attempt, so a live request waits for at most one generation."""
+        """Refill loop. Generates missing focuses one at a time, requested ones first. The model
+        lock is taken per attempt, so a live request waits for at most one generation."""
         while True:
-            failed = False
-            for focus in [f for f in FOCUS if f not in self.ready()]:
+            failed = set()
+            while (focus := self._next_missing()) is not None and focus not in failed:
                 workout = None
                 for attempt in range(1, REFILL_ATTEMPTS + 1):
                     try:
@@ -95,14 +111,17 @@ class WorkoutBuffer:
                         break
                     except ThinOutput as e:
                         log.warning("Buffer refill for %s, attempt %d: %s", focus, attempt, e)
-                    except Exception as e:  # Ollama down or similar: no point trying the rest now
+                    except Exception as e:  # Ollama down or similar
                         log.warning("Buffer refill for %s failed: %s", focus, e)
                         break
-                if workout is None:
-                    failed = failed or focus not in self.ready()
-                    continue
-                self.put(focus, workout)
-                log.info("Buffer: %s ready", focus)
+                if workout is not None:
+                    self.put(focus, workout)
+                    log.info("Buffer: %s ready", focus)
+                with self.lock:
+                    if focus in self.wanted:
+                        self.wanted.remove(focus)
+                if focus not in self.ready():
+                    failed.add(focus)
             self.wake.wait(REFILL_RETRY_SECONDS if failed else None)
             self.wake.clear()
 
@@ -150,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            self._send(200, {"ok": True, "ready": BUFFER.ready() if BUFFER else []})
+            self._send(200, {"ok": True, "buffer": BUFFER is not None, "ready": BUFFER.ready() if BUFFER else []})
         else:
             self._send(404, {"error": "Not found"})
 
@@ -172,6 +191,15 @@ class Handler(BaseHTTPRequestHandler):
                 focus = check_choice(intensity, str(data.get("focus")))
                 workout = BUFFER.take(focus) if BUFFER else None
                 buffered = workout is not None
+                if BUFFER and not buffered and not data.get("wait"):
+                    # Fail fast: mobile apps drop requests that take minutes. Refill this focus next.
+                    BUFFER.request(focus)
+                    ready = BUFFER.ready()
+                    return self._send(503, {
+                        "error": f"No {focus} workout is ready yet. It's being prepared now (about 3 minutes). "
+                                 f"Ready now: {', '.join(ready) if ready else 'none yet'}.",
+                        "ready": ready,
+                    })
                 if not buffered:
                     with GENERATE_LOCK:
                         workout = make_workout(focus)
