@@ -1,0 +1,18 @@
+# systemd *user* unit for the Doc Gym service.
+# Installed to ~/.config/systemd/user/ by ops/deploy-server.sh. Needs lingering enabled
+# (ops/server-service-setup.sh) so it runs without an SSH session.
+[Unit]
+Description=Doc Gym service (workout generation + grading for Obsidian)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/doc-gym/scripts
+ExecStart=/usr/bin/python3 %h/doc-gym/scripts/service.py
+# Ollama runs on this machine; real env vars win over .env.
+Environment=OLLAMA_URL=http://127.0.0.1:11434
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
