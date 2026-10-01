@@ -18,6 +18,8 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import select
+import socket
 import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -25,10 +27,11 @@ from pathlib import Path
 
 from common import PROJECT_DIR, DocGymError, env, load_env, ollama_url
 from evaluate_draft import grade_note
-from generate_prompt import FOCUS, PROMPT_VERSION, check_choice, make_workout, render_note
+from generate_prompt import FOCUS, PROMPT_VERSION, ThinOutput, check_choice, make_workout, render_note
 
 MAX_BODY = 1_000_000
-REFILL_RETRY_SECONDS = 300
+REFILL_ATTEMPTS = 3
+REFILL_RETRY_SECONDS = 120
 # A CPU-only server has one model slot; queue generations instead of piling them onto Ollama.
 GENERATE_LOCK = threading.Lock()
 log = logging.getLogger("doc-gym")
@@ -67,22 +70,38 @@ class WorkoutBuffer:
         self.wake.set()
         return workout
 
+    def put(self, focus: str, workout: dict) -> bool:
+        """Store a workout if that focus has no ready one. Returns whether it was stored."""
+        with self.lock:
+            if focus in self.items:
+                return False
+            self.items[focus] = workout
+            self._save()
+        return True
+
     def run(self) -> None:
-        """Refill loop. Generates missing focuses one at a time, sharing the model lock with requests."""
+        """Refill loop. Generates missing focuses one at a time. The model lock is taken per
+        attempt, so a live request waits for at most one generation."""
         while True:
-            missing = [f for f in FOCUS if f not in self.ready()]
             failed = False
-            for focus in missing:
-                try:
-                    with GENERATE_LOCK:
-                        workout = make_workout(focus)
-                except Exception as e:  # model hiccup or Ollama down: retry later
-                    log.warning("Buffer refill for %s failed: %s", focus, e)
-                    failed = True
-                    break
-                with self.lock:
-                    self.items[focus] = workout
-                    self._save()
+            for focus in [f for f in FOCUS if f not in self.ready()]:
+                workout = None
+                for attempt in range(1, REFILL_ATTEMPTS + 1):
+                    try:
+                        with GENERATE_LOCK:
+                            if focus in self.ready():  # a live request's leftover filled it meanwhile
+                                break
+                            workout = make_workout(focus, attempts=1)
+                        break
+                    except ThinOutput as e:
+                        log.warning("Buffer refill for %s, attempt %d: %s", focus, attempt, e)
+                    except Exception as e:  # Ollama down or similar: no point trying the rest now
+                        log.warning("Buffer refill for %s failed: %s", focus, e)
+                        break
+                if workout is None:
+                    failed = failed or focus not in self.ready()
+                    continue
+                self.put(focus, workout)
                 log.info("Buffer: %s ready", focus)
             self.wake.wait(REFILL_RETRY_SECONDS if failed else None)
             self.wake.clear()
@@ -97,13 +116,32 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         log.info("%s %s", self.client_address[0], fmt % args)
 
-    def _send(self, status: int, payload: dict) -> None:
+    def _client_gone(self) -> bool:
+        """True if the client already hung up. A clean close only shows up as end-of-stream,
+        so peek instead of relying on the write to fail."""
+        try:
+            readable, _, _ = select.select([self.connection], [], [], 0)
+            return bool(readable) and self.connection.recv(1, socket.MSG_PEEK) == b""
+        except OSError:
+            return True
+
+    def _send(self, status: int, payload: dict) -> bool:
+        """Send a JSON response. Returns False if the client had already gone away."""
         body = json.dumps(payload).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        if self._client_gone():
+            log.warning("%s disconnected before the %s response", self.client_address[0], self.path)
+            return False
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return True
+        except (BrokenPipeError, ConnectionResetError):
+            # Mobile apps drop connections when backgrounded or the screen locks.
+            log.warning("%s disconnected before the %s response", self.client_address[0], self.path)
+            return False
 
     def _authorized(self) -> bool:
         token = env("DOC_GYM_TOKEN", "")
@@ -138,7 +176,9 @@ class Handler(BaseHTTPRequestHandler):
                     with GENERATE_LOCK:
                         workout = make_workout(focus)
                 stem, content = render_note(workout, intensity, focus)
-                self._send(200, {"stem": stem, "content": content, "buffered": buffered})
+                sent = self._send(200, {"stem": stem, "content": content, "buffered": buffered})
+                if not sent and BUFFER and BUFFER.put(focus, workout):
+                    log.info("Buffer: kept %s from a dropped request", focus)
             elif self.path == "/evaluate":
                 content, grade, total = grade_note(str(data.get("content") or ""))
                 self._send(200, {"content": content, "grade": grade, "score": f"{total}/30"})

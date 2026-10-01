@@ -60,6 +60,10 @@ INDUSTRIES = [
     "kayak rentals", "tattoo parlors", "escape rooms", "farmers markets", "cybersecurity", "fintech", "edtech",
 ]
 PLACEHOLDER = "<!-- Write your draft here. Delete this comment when you start. -->"
+
+
+class ThinOutput(DocGymError):
+    """The model answered, but unusably (bad JSON, too little content). Worth retrying."""
 # Bump when build_prompt() or clean() changes, so the service discards pre-generated workouts.
 PROMPT_VERSION = 2
 
@@ -98,7 +102,7 @@ def call_ollama(prompt: str) -> dict:
     try:
         return json.loads(resp.get("response", ""))
     except json.JSONDecodeError as e:
-        raise DocGymError("The model returned malformed JSON. Try again.") from e
+        raise ThinOutput("The model returned malformed JSON. Try again.") from e
 
 
 def as_lines(value, limit: int) -> list[str]:
@@ -122,7 +126,7 @@ def clean(data: dict, focus: str) -> dict:
         "requirements": as_lines(data.get("requirements"), 3),
     }
     if not workout["context"] or len(workout["inputs"]) < 2:
-        raise DocGymError("The model returned too little to work with. Try again.")
+        raise ThinOutput("The model returned too little to work with. Try again.")
     return workout
 
 
@@ -177,13 +181,18 @@ def check_choice(intensity: str, focus: str) -> str:
     return focus
 
 
-def make_workout(focus: str) -> dict:
-    """The slow part: ask the model for a workout. Independent of intensity, so it can be pre-generated."""
-    try:
-        data = call_ollama(build_prompt(focus, random.choice(INDUSTRIES)))
-    except RuntimeError as e:
-        raise DocGymError(f"Ollama failed: {e}") from e
-    return clean(data, focus)
+def make_workout(focus: str, attempts: int = 2) -> dict:
+    """The slow part: ask the model for a workout. Independent of intensity, so it can be pre-generated.
+    Retries unusable answers (ThinOutput); an unreachable Ollama fails at once."""
+    for attempt in range(1, attempts + 1):
+        try:
+            data = call_ollama(build_prompt(focus, random.choice(INDUSTRIES)))
+            return clean(data, focus)
+        except RuntimeError as e:
+            raise DocGymError(f"Ollama failed: {e}") from e
+        except ThinOutput:
+            if attempt == attempts:
+                raise
 
 
 def render_note(workout: dict, intensity: str, focus: str) -> tuple[str, str]:
