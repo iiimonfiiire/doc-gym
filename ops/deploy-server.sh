@@ -25,5 +25,5 @@ ssh "$HOST" "chmod 600 ~/$DIR/.env"
 
 echo "== (Re)starting the service"
 ssh "$HOST" 'systemctl --user daemon-reload && systemctl --user enable --quiet doc-gym && systemctl --user restart doc-gym && sleep 2 && systemctl --user --no-pager status doc-gym | head -5'
-echo "== Health check"
-curl -fsS -m 5 "http://${HOST#*@}:8765/health" && echo
+echo "== Health check (from the server itself, so firewall rules don't matter)"
+ssh "$HOST" 'curl -fsS -m 5 http://127.0.0.1:8765/health' && echo
