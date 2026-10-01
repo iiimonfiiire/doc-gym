@@ -60,6 +60,8 @@ INDUSTRIES = [
     "kayak rentals", "tattoo parlors", "escape rooms", "farmers markets", "cybersecurity", "fintech", "edtech",
 ]
 PLACEHOLDER = "<!-- Write your draft here. Delete this comment when you start. -->"
+# Bump when build_prompt() or clean() changes, so the service discards pre-generated workouts.
+PROMPT_VERSION = 2
 
 
 def build_prompt(focus: str, industry: str) -> str:
@@ -167,19 +169,34 @@ def render(w: dict, intensity: str, focus: str, tone: str, date: str) -> str:
     return "\n".join(lines)
 
 
-def generate_note(intensity: str, focus: str) -> tuple[str, str]:
-    """Generate a workout. Returns (file stem like 2026-10-01-Title, note content)."""
+def check_choice(intensity: str, focus: str) -> str:
+    """Validate the picker values. Returns the canonical focus name."""
     focus = FOCUS_ALIASES.get(focus, focus)
     if intensity not in INTENSITY or focus not in FOCUS:
         raise DocGymError(f"Unknown intensity/focus: {intensity!r} / {focus!r}")
+    return focus
+
+
+def make_workout(focus: str) -> dict:
+    """The slow part: ask the model for a workout. Independent of intensity, so it can be pre-generated."""
     try:
         data = call_ollama(build_prompt(focus, random.choice(INDUSTRIES)))
     except RuntimeError as e:
         raise DocGymError(f"Ollama failed: {e}") from e
-    workout = clean(data, focus)
+    return clean(data, focus)
+
+
+def render_note(workout: dict, intensity: str, focus: str) -> tuple[str, str]:
+    """The fast part: date, random tone, and intensity. Returns (file stem, note content)."""
     date = dt.date.today().isoformat()
     tone = random.choice(list(TONES))
     return f"{date}-{slugify(workout['title'])}", render(workout, intensity, focus, tone, date)
+
+
+def generate_note(intensity: str, focus: str) -> tuple[str, str]:
+    """Generate a workout from scratch. Returns (file stem like 2026-10-01-Title, note content)."""
+    focus = check_choice(intensity, focus)
+    return render_note(make_workout(focus), intensity, focus)
 
 
 def main() -> None:

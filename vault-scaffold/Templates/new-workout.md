@@ -44,7 +44,7 @@ const focus = await tp.system.suggester(
   ["SaaS Docs", "API Specs", "Troubleshooting", "Release Notes"], false, "Focus");
 if (!focus) return stop("Doc Gym: cancelled.");
 
-const notice = new Notice(`Doc Gym: generating ${intensity} · ${focus}… (this can take 1–3 minutes)`, 0);
+const notice = new Notice(`Doc Gym: generating ${intensity} · ${focus}… (usually instant; up to 3 minutes if none is ready)`, 0);
 let workout;
 try {
   workout = await call("/generate", { intensity, focus });

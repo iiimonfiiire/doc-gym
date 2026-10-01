@@ -63,5 +63,6 @@ The templates read `Doc Gym/.doc-gym.json` (hidden, synced with the vault). It h
   - Restart it on the server: `systemctl --user restart doc-gym`. Logs: `journalctl --user -u doc-gym -n 50`.
 - **"Missing or wrong Doc Gym token".** Rerun `./install.sh`, then `./ops/deploy-server.sh`. The token in `.env` on both machines must match `.doc-gym.json`.
 - **"The model returned too little to work with".** Small models sometimes produce thin output. Run it again.
+- **A workout took minutes instead of seconds.** The server keeps one ready workout per focus and makes a new one in the background after each use (about 2–3 minutes). Two workouts of the same focus in a row means the second one is generated live.
 - **"The draft is empty or under 20 words".** Write under `## Draft` and delete the placeholder comment.
 - **"The note changed while grading".** You typed during grading. Run it again.

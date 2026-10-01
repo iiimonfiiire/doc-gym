@@ -12,6 +12,8 @@ Obsidian (desktop/mobile) ─ Templater JS ─ requestUrl ─▶ scripts/service
 
 The service never touches the vault. Obsidian sends note text and writes the result back.
 
+Generation takes minutes on a small CPU server, so the service keeps **one pre-generated workout per focus** in `cache/buffer.json`. A request takes one, applies the chosen intensity, a random tone, and today's date, and returns at once. A background thread refills it. `GET /health` lists which focuses are ready. Set `DOC_GYM_BUFFER=0` to disable. Bump `PROMPT_VERSION` in `generate_prompt.py` whenever the prompt changes, so stale buffered workouts are discarded.
+
 ## Requirements
 
 - **Server:** Linux with systemd, Python 3.9+, [Ollama](https://ollama.com), and ufw. Tested on Ubuntu 24.04 with 4 GB RAM.
@@ -36,7 +38,7 @@ The service never touches the vault. Obsidian sends note text and writes the res
 | `scripts/common.py` | Env loading, HTTP, frontmatter, note I/O |
 | `scripts/configure_templater.py`, `write_client_config.py` | Used by `install.sh` |
 | `vault-scaffold/` | Templates, Dashboard, and guide copied into `<vault>/Doc Gym/` |
-| `ops/` | Server setup, systemd user unit, deploy script, NVIDIA driver cleanup |
+| `ops/` | Server setup, systemd user unit, deploy script, firewall helper, NVIDIA driver cleanup |
 
 ## Develop
 
@@ -56,6 +58,7 @@ python3 scripts/evaluate_draft.py "Doc Gym/Prompts/<note>.md" --dry-run
 - The vault holds only the service token, in `.doc-gym.json`. It syncs wherever your vault syncs. Rotate it by deleting `DOC_GYM_TOKEN` from `.env`, rerunning `install.sh`, and redeploying.
 - The service speaks plain HTTP. Reach it over a VPN (WireGuard/Tailscale encrypts the traffic), or keep it on a trusted LAN. Restrict port 8765 with ufw to those networks only.
 - Ollama has no auth. Keep it on localhost unless desktop CLIs need it directly.
+- To change who can reach a port later: `sudo bash ops/server-firewall.sh <port> [<cidr> ...]`. It replaces every ufw rule for that port, and with no networks the port is closed.
 
 ## Known issue: Ollama installer and old NVIDIA GPUs
 
