@@ -7,7 +7,8 @@ receives note text, and does all reading and writing itself.
   POST /generate {"intensity","focus"[,"wait"]}  -> {"stem", "content", "buffered"}
   POST /evaluate {"content"}                     -> {"content", "grade", "score"}
 
-POST requests need `Authorization: Bearer $DOC_GYM_TOKEN`.
+POST requests need `Authorization: Bearer $DOC_GYM_TOKEN`. The service won't start without one.
+It listens on 127.0.0.1:8765 unless DOC_GYM_BIND says otherwise.
 
 Generating a workout takes minutes on a small CPU server, so the service keeps one
 pre-generated workout per focus (on disk, so it survives restarts) and refills it in the
@@ -20,6 +21,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import os
 import select
 import socket
 import threading
@@ -32,6 +34,9 @@ from evaluate_draft import grade_note
 from generate_prompt import FOCUS, PROMPT_VERSION, ThinOutput, check_choice, make_workout, render_note
 
 MAX_BODY = 1_000_000
+DEFAULT_BIND = "127.0.0.1:8765"
+# Per-socket-operation timeout, so a client that stalls mid-request can't hold a thread forever.
+SOCKET_TIMEOUT = 60
 REFILL_ATTEMPTS = 3
 REFILL_RETRY_SECONDS = 120
 # A CPU-only server has one model slot; queue generations instead of piling them onto Ollama.
@@ -58,7 +63,10 @@ class WorkoutBuffer:
     def _save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"version": PROMPT_VERSION, "items": self.items}))
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"version": PROMPT_VERSION, "items": self.items}, f)
+            f.flush()
+            os.fsync(f.fileno())
         tmp.replace(self.path)
 
     def ready(self) -> list[str]:
@@ -134,6 +142,7 @@ class WorkoutBuffer:
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "doc-gym/1.0"
+    timeout = SOCKET_TIMEOUT
 
     def log_message(self, fmt, *args):
         log.info("%s %s", self.client_address[0], fmt % args)
@@ -191,6 +200,8 @@ class Handler(BaseHTTPRequestHandler):
         buffer = self.server.buffer
         try:
             data = json.loads(self.rfile.read(length) or b"{}")
+            if not isinstance(data, dict):
+                return self._send(400, {"error": "Body must be a JSON object."})
             if self.path == "/generate":
                 intensity = str(data.get("intensity"))
                 focus = check_choice(intensity, str(data.get("focus")))
@@ -219,11 +230,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(404, {"error": "Not found"})
         except DocGymError as e:
             self._send(422, {"error": str(e)})
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, UnicodeDecodeError):
             self._send(400, {"error": "Body must be JSON."})
-        except Exception as e:  # keep the service up; details go to the journal
+        except Exception:  # keep the service up; details go to the journal, not the client
             log.error("Unhandled error on %s\n%s", self.path, traceback.format_exc())
-            self._send(500, {"error": f"Internal error: {e}"})
+            self._send(500, {"error": "Internal error. Details are in the service log."})
+
+
+def parse_bind(value: str) -> tuple[str, int]:
+    """'host:port' or a bare port. A missing host means localhost, never all interfaces."""
+    host, _, port = value.strip().rpartition(":")
+    try:
+        return host or "127.0.0.1", int(port)
+    except ValueError:
+        raise SystemExit(f"DOC_GYM_BIND must be host:port, got {value!r}") from None
 
 
 def create_server(host: str, port: int, buffer: WorkoutBuffer | None = None) -> ThreadingHTTPServer:
@@ -243,8 +263,8 @@ def main() -> None:
         cache = Path(env("DOC_GYM_CACHE_DIR", str(PROJECT_DIR / "cache"))).expanduser()
         buffer = WorkoutBuffer(cache / "buffer.json")
         threading.Thread(target=buffer.run, name="buffer-refill", daemon=True).start()
-    host, _, port = env("DOC_GYM_BIND", "0.0.0.0:8765").rpartition(":")
-    server = create_server(host, int(port), buffer)
+    host, port = parse_bind(env("DOC_GYM_BIND", DEFAULT_BIND))
+    server = create_server(host, port, buffer)
     log.info("Doc Gym service on %s:%s, Ollama at %s, buffer %s", host, port, ollama_url(),
              f"ready: {buffer.ready()}" if buffer else "off")
     server.serve_forever()

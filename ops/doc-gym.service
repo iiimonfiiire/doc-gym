@@ -10,6 +10,9 @@ WorkingDirectory=%h/doc-gym/scripts
 ExecStart=/usr/bin/python3 %h/doc-gym/scripts/service.py
 # Ollama runs on this machine; real env vars win over .env.
 Environment=OLLAMA_URL=http://127.0.0.1:11434
+# Phones and laptops reach the service over the network, so listen on all interfaces here.
+# ufw (ops/server-service-setup.sh) limits port 8765 to the networks you allow.
+Environment=DOC_GYM_BIND=0.0.0.0:8765
 Environment=PYTHONUNBUFFERED=1
 Restart=on-failure
 RestartSec=5

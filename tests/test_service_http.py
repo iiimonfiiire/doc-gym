@@ -1,7 +1,6 @@
 """HTTP-level tests: a real server on an ephemeral localhost port, with the model calls mocked."""
 from __future__ import annotations
 
-import http.client
 import json
 import socket
 import threading
@@ -11,46 +10,6 @@ import pytest
 
 import service
 from conftest import TEST_TOKEN
-
-AUTH = {"Authorization": f"Bearer {TEST_TOKEN}"}
-
-
-class Client:
-    def __init__(self, port: int):
-        self.port = port
-
-    def request(self, method: str, path: str, body=None, headers=None, raw: bytes | None = None):
-        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
-        data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
-        conn.request(method, path, body=data, headers={"Content-Type": "application/json", **(headers or {})})
-        resp = conn.getresponse()
-        payload = json.loads(resp.read() or b"{}")
-        conn.close()
-        return resp.status, payload
-
-    def post(self, path, body=None, headers=AUTH, raw=None):
-        return self.request("POST", path, body, headers, raw)
-
-
-@pytest.fixture
-def buffer(tmp_path):
-    return service.WorkoutBuffer(tmp_path / "buffer.json")
-
-
-@pytest.fixture
-def start(monkeypatch):
-    monkeypatch.setenv("DOC_GYM_TOKEN", TEST_TOKEN)
-    servers = []
-
-    def _start(buffer=None):
-        server = service.create_server("127.0.0.1", 0, buffer)
-        threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
-        servers.append(server)
-        return Client(server.server_address[1])
-    yield _start
-    for server in servers:
-        server.shutdown()
-        server.server_close()
 
 
 @pytest.fixture
