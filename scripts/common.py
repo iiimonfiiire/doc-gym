@@ -45,8 +45,7 @@ def vault_dir() -> Path:
 
 
 def ollama_url() -> str:
-    # PHOENIX_OLLAMA_URL is the pre-anonymization name, still honored for existing .env files.
-    return (env("OLLAMA_URL") or env("PHOENIX_OLLAMA_URL") or "http://127.0.0.1:11434").rstrip("/")
+    return env("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 
 
 def die(msg: str, code: int = 1) -> None:

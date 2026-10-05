@@ -1,0 +1,12 @@
+# Tool config only. The scripts are stdlib-only and not packaged.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 130
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
