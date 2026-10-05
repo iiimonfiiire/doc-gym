@@ -86,12 +86,17 @@ def call_gemini(assignment: str, draft: str) -> dict:
 
 
 def evaluate(assignment: str, draft: str) -> tuple[dict, str]:
+    # Network failures, or a response that isn't the JSON shape we asked for.
+    failures = (RuntimeError, KeyError, IndexError, TypeError, json.JSONDecodeError)
     try:
         return call_groq(assignment, draft), f"Groq {env('GROQ_MODEL', GROQ_MODEL)}"
-    except (RuntimeError, KeyError, json.JSONDecodeError) as e:
+    except failures as e:
         if not env("GEMINI_API_KEY"):
             raise DocGymError(f"Groq evaluation failed: {e}") from e
-        return call_gemini(assignment, draft), f"Gemini {env('GEMINI_MODEL', 'gemini-2.5-flash')} (fallback)"
+        try:
+            return call_gemini(assignment, draft), f"Gemini {env('GEMINI_MODEL', 'gemini-2.5-flash')} (fallback)"
+        except failures as e2:
+            raise DocGymError(f"Groq evaluation failed: {e}. Gemini fallback failed: {e2}") from e2
 
 
 def normalize(result: dict) -> dict:
@@ -101,7 +106,7 @@ def normalize(result: dict) -> dict:
         try:
             clean[c] = max(1, min(10, int(round(float(scores.get(c, 0))))))
         except (TypeError, ValueError):
-            raise DocGymError(f"Evaluator returned an invalid score for {c}: {scores.get(c)!r}")
+            raise DocGymError(f"Evaluator returned an invalid score for {c}: {scores.get(c)!r}") from None
     result["scores"] = clean
     return result
 
