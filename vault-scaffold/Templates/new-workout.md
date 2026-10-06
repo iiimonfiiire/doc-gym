@@ -30,13 +30,14 @@ async function findService() {
 const service = await findService();
 if (!service) return stop("Doc Gym: can't reach the Doc Gym service. Away from home? Turn on your VPN (e.g. Tailscale).");
 const ready = service.health.ready ?? [];
-const label = f => (service.health.buffer ? `${f} · ${ready.includes(f) ? "ready" : "preparing (~3 min)"}` : f);
+const label = f => (service.health.buffer ? `${f} · ${ready.includes(f) ? "ready" : "preparing (a few min)"}` : f);
 
 const intensity = await tp.system.suggester(
-  ["Sprint · ~150 words · 15 min", "Routine · ~400 words · 30 min", "Endurance · ~900 words · 60 min"],
+  ["Sprint · 15 min", "Routine · 30 min", "Endurance · 60 min"],
   ["Sprint", "Routine", "Endurance"], false, "Intensity");
 if (!intensity) return stop("Doc Gym: cancelled.");
-const focuses = ["SaaS Docs", "API Specs", "Troubleshooting", "Release Notes"];
+const focuses = ["SaaS Docs", "API Specs", "Troubleshooting", "Release Notes",
+  "UX Microcopy", "GTM Brief", "Product Walkthrough", "Tutorial"];
 const focus = await tp.system.suggester(focuses.map(label), focuses, false, "Focus");
 if (!focus) return stop("Doc Gym: cancelled.");
 
