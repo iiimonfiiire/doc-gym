@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -11,7 +12,7 @@ import sys
 import pytest
 
 import service
-from conftest import ROOT
+from conftest import PAKT_CACHE, ROOT, needs_pakt
 
 SHELL_SCRIPTS = sorted([ROOT / "install.sh", *(ROOT / "ops").glob("*.sh")])
 # Also look next to the interpreter, so a venv-installed shellcheck (shellcheck-py) is found.
@@ -101,3 +102,62 @@ def test_shell_script_syntax(script):
 def test_shellcheck(script):
     result = subprocess.run([SHELLCHECK, "-S", "warning", str(script)], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout
+
+
+def run_python(args: list, env: dict, *flags) -> subprocess.CompletedProcess:
+    base = {k: v for k, v in os.environ.items() if not k.startswith(("DOC_GYM_", "PYTHON"))}
+    return subprocess.run([sys.executable, *flags, *args], cwd=ROOT / "scripts", env={**base, **env},
+                          capture_output=True, text=True, timeout=30)
+
+
+def test_pakt_loads_from_the_vendor_dir(tmp_path):
+    pkg = tmp_path / "vendor" / "pakt"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    for name in ("document", "review", "sources", "structure", "styleguide"):
+        (pkg / f"{name}.py").write_text("")
+    code = "import signal_guide, sys; p = signal_guide.load_pakt(); print(p.__file__); print(sys.path[0])"
+    # -S skips site-packages, so only the vendor dir can provide pakt.
+    result = run_python(["-c", code], {"DOC_GYM_VENDOR": str(tmp_path / "vendor")}, "-S")
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [str(pkg / "__init__.py"), str(tmp_path / "vendor")]
+
+
+def test_missing_pakt_is_a_clear_error(tmp_path):
+    code = "import signal_guide\ntry:\n    signal_guide.load_pakt()\nexcept Exception as e:\n    print(e)"
+    result = run_python(["-c", code], {"DOC_GYM_VENDOR": str(tmp_path / "no-vendor")}, "-S")
+    assert "PAKT is not available" in result.stdout and "ops/vendor-pakt.sh" in result.stdout
+
+
+@needs_pakt
+def test_grading_never_imports_anthropic(tmp_path, vault):
+    trap = tmp_path / "trap" / "anthropic"
+    trap.mkdir(parents=True)
+    (trap / "__init__.py").write_text("raise ImportError('Doc Gym must not import anthropic')\n")
+    runner = tmp_path / "runner.py"
+    runner.write_text(
+        "import runpy, sys\n"
+        "sys.argv = sys.argv[1:]\n"
+        "runpy.run_path(sys.argv[0], run_name='__main__')\n"
+        "assert 'anthropic' not in sys.modules\n")
+    note = vault / "Doc Gym" / "note.md"
+    note.write_text("---\nsignal_type: release_note\n---\n## Draft\n" + "You can now export hives as CSV files. " * 5)
+    result = run_python(
+        [str(runner), str(ROOT / "scripts" / "evaluate_draft.py"), str(note), "--dry-run"],
+        {"PYTHONPATH": os.pathsep.join([str(trap.parent), str(ROOT / "scripts")]), "DOC_GYM_VAULT": str(vault),
+         "PAKT_OFFLINE": "1", "PAKT_CACHE_DIR": PAKT_CACHE})
+    assert result.returncode == 0, result.stderr
+    assert "### Signal findings" in result.stdout
+
+
+def test_pakt_lock_pins_a_full_commit():
+    lock = dict(line.split("=", 1) for line in (ROOT / "pakt.lock").read_text().splitlines()
+                if line and not line.startswith("#"))
+    assert re.fullmatch(r"[0-9a-f]{40}", lock["PAKT_REF"])
+    assert lock["PAKT_REPO"].startswith("https://github.com/")
+
+
+def test_deploy_ships_pakt_and_the_bridge():
+    deploy = (ROOT / "ops" / "deploy-server.sh").read_text()
+    assert "vendor-pakt.sh" in deploy
+    assert "signal_guide" in deploy
