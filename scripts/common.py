@@ -1,4 +1,4 @@
-"""Shared helpers for Doc Gym: config, HTTP, note I/O. Stdlib only, Python 3.9+."""
+"""Shared helpers for Doc Gym: config, HTTP, note I/O. Stdlib only, Python 3.11+."""
 from __future__ import annotations
 
 import http.client

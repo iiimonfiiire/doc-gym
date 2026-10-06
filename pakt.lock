@@ -1,0 +1,5 @@
+# The PAKT version Doc Gym vendors. ops/vendor-pakt.sh and CI read this file.
+# PAKT_REF is a full commit SHA. Switch it to a release tag once PAKT publishes one.
+# Doc Gym grades against the Signal release this PAKT ref pins, unless DOC_GYM_GUIDE overrides it.
+PAKT_REPO=https://github.com/iiimonfiiire/pakt
+PAKT_REF=eb5711881d1de21a79a8fa6d1e5511d4cfe7f290
