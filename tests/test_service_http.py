@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import socket
 import threading
 import time
@@ -9,7 +10,7 @@ import time
 import pytest
 
 import service
-from conftest import TEST_TOKEN
+from conftest import TEST_TOKEN, needs_pakt
 
 
 @pytest.fixture
@@ -79,6 +80,42 @@ def test_generate_serves_buffered_workout(start, buffer, workout, no_model):
     assert buffer.ready() == []
 
 
+@needs_pakt
+def test_generated_workout_carries_signal_requirements(start, buffer, workout, no_model):
+    buffer.put("UX Microcopy", workout)
+    status, body = start(buffer).post("/generate", {"intensity": "Sprint", "focus": "UX Microcopy"})
+    assert status == 200
+    assert "signal_type: ui_microcopy" in body["content"]
+    assert "## Signal requirements" in body["content"]
+    assert "6 strings" in body["content"]
+
+
+def test_buffer_still_serves_without_the_guide(start, buffer, workout, no_model, no_guide):
+    buffer.put("Release Notes", workout)
+    status, body = start(buffer).post("/generate", {"intensity": "Routine", "focus": "Release Notes"})
+    assert status == 200
+    assert body["buffered"] is True
+    assert "The style guide did not load" in body["content"]
+
+
+def test_evaluate_without_the_guide_is_422(start, no_guide):
+    note = "---\nsignal_type: kb_task\n---\n## Draft\n" + "Open the app and pair the sensor. " * 5
+    status, body = start().post("/evaluate", {"content": note})
+    assert status == 422
+    assert "style guide" in body["error"] or "PAKT" in body["error"]
+
+
+def test_warm_guide_logs_and_survives_a_missing_guide(no_guide, caplog):
+    with caplog.at_level(logging.WARNING, logger="doc-gym"):
+        assert service.warm_guide() is False
+    assert "Style guide not loaded" in caplog.text
+
+
+@needs_pakt
+def test_warm_guide_loads_the_pinned_guide():
+    assert service.warm_guide() is True
+
+
 def test_generate_wait_generates_live(start, buffer, workout, monkeypatch):
     monkeypatch.setattr(service, "make_workout", lambda focus, attempts=2: workout)
     status, body = start(buffer).post("/generate", {"intensity": "Sprint", "focus": "SaaS Docs", "wait": True})
@@ -125,7 +162,7 @@ def test_evaluate_happy_path(start, monkeypatch):
     monkeypatch.setattr(service, "grade_note", lambda text: (text + "\n## Evaluation\n", "B", 24))
     status, body = start().post("/evaluate", {"content": "note"})
     assert status == 200
-    assert body == {"content": "note\n## Evaluation\n", "grade": "B", "score": "24/30"}
+    assert body == {"content": "note\n## Evaluation\n", "grade": "B", "score": "24/40"}
 
 
 def test_evaluate_user_error_is_422(start):

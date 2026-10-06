@@ -21,7 +21,11 @@ const pages = dv.pages('"Doc Gym/Prompts" or "Doc Gym/Submissions"')
 const done = pages.where(p => p.status === "completed");
 const toISO = d => (d && d.toISODate) ? d.toISODate() : String(d ?? "").slice(0, 10);
 const dayOf = p => toISO(p.evaluated ?? p.date);
-const pts = p => parseInt(String(p.score ?? "").split("/")[0], 10);
+// Scores are "points/max": older workouts are out of 30, Signal-graded ones out of 40.
+const pct = p => {
+  const [got, max] = String(p.score ?? "").split("/").map(n => parseInt(n, 10));
+  return got >= 0 && max > 0 ? (100 * got) / max : NaN;
+};
 
 // Streaks count calendar days with at least one graded workout.
 const days = [...new Set(done.map(dayOf).values)].filter(Boolean).sort();
@@ -39,22 +43,22 @@ if (days.length && (days.at(-1) === today || days.at(-1) === yesterday)) {
   current = 1;
   for (let i = days.length - 1; i > 0 && t(days[i]) - t(days[i - 1]) === DAY; i--) current++;
 }
-const scores = done.map(pts).values.filter(n => !isNaN(n));
-const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : "–";
+const scores = done.map(pct).values.filter(n => !isNaN(n));
+const avg = scores.length ? `${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}%` : "–";
 
 dv.paragraph(
   `**Completed:** ${done.length} · **Current streak:** ${current} day${current === 1 ? "" : "s"}` +
-  ` · **Longest:** ${longest} · **Avg score:** ${avg}/30 · **Pending:** ${pages.length - done.length}`);
+  ` · **Longest:** ${longest} · **Avg score:** ${avg} · **Pending:** ${pages.length - done.length}`);
 
 dv.header(3, "Completed workouts");
-dv.table(["Date", "Title", "Focus", "Intensity", "Tone", "Grade", "Score", "Status"],
+dv.table(["Date", "Title", "Focus", "Intensity", "Grade", "Score", "Status"],
   done.sort(p => dayOf(p), "desc").map(p => [
-    dayOf(p), p.file.link, p.focus, p.intensity, p.tone, p.grade, p.score, p.status]));
+    dayOf(p), p.file.link, p.focus, p.intensity, p.grade, p.score, p.status]));
 
 const pending = pages.where(p => p.status !== "completed");
 if (pending.length) {
   dv.header(3, "Pending");
-  dv.table(["Date", "Title", "Focus", "Intensity", "Tone"],
-    pending.sort(p => toISO(p.date), "desc").map(p => [toISO(p.date), p.file.link, p.focus, p.intensity, p.tone]));
+  dv.table(["Date", "Title", "Focus", "Intensity"],
+    pending.sort(p => toISO(p.date), "desc").map(p => [toISO(p.date), p.file.link, p.focus, p.intensity]));
 }
 ```
