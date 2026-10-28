@@ -11,7 +11,7 @@
 [guide]
 id = "signal"
 name = "Signal"
-version = "2026-10-06"
+version = "2026-10-27"
 document = "SIGNAL.md"
 format = 1
 description = "Clear, concise, and easy-to-scan writing for UX writing, technical writing, and knowledge management."
@@ -228,6 +228,15 @@ severity = "suggestion"
 summary = "Prefer the simpler word whenever it says the same thing."
 
 [[rules]]
+id = "calm_tone"
+section = "6. Voice and grammar > Calm tone"
+severity = "warning"
+summary = "State risk plainly, without artificial urgency or pressure words."
+fix = "Delete the pressure word. State the deadline, severity, or risk as a fact."
+check = "urgency_language"
+params = { words = ["immediately", "urgent", "urgently", "right away", "act now", "catastrophic", "disastrous", "panic"] }
+
+[[rules]]
 id = "full_sentences"
 section = "6. Voice and grammar > Sentence structure"
 severity = "suggestion"
@@ -307,6 +316,17 @@ severity = "warning"
 summary = "Use clear headings and a logical hierarchy. Avoid walls of text."
 
 [[rules]]
+id = "paragraph_length"
+section = "9. Formatting and visual hierarchy > Paragraph length"
+severity = "warning"
+summary = "Cap prose paragraphs at four sentences."
+fix = "Split the paragraph, or turn its content into a list."
+check = "paragraph_length"
+params = { max_sentences = 4 }
+[rules.by_type.ui_microcopy]
+enabled = false
+
+[[rules]]
 id = "list_types"
 section = "9. Formatting and visual hierarchy > Lists"
 severity = "warning"
@@ -317,6 +337,13 @@ id = "callouts"
 section = "9. Formatting and visual hierarchy > Blockquotes and callouts"
 severity = "suggestion"
 summary = "Use blockquotes for quotations only, and callouts for notes and warnings."
+
+[[rules]]
+id = "warning_callouts"
+section = "9. Formatting and visual hierarchy > Warnings"
+severity = "warning"
+summary = "Reserve Warning callouts for destructive or irreversible actions, and state the recovery step."
+fix = "Downgrade the callout to a Note, or add the recovery step or the safe alternative."
 
 [[rules]]
 id = "tables"
@@ -341,6 +368,13 @@ severity = "error"
 summary = "Write ordered steps as a numbered list."
 fix = "Turn the bulleted steps into a numbered list."
 check = "steps_numbered"
+
+[[content_types.kb_article.requirements]]
+id = "step_outcome"
+section = "10. Document types > Step outcomes"
+severity = "warning"
+summary = "When a step changes what the reader sees, state the result in the same step."
+fix = "Add the visible result after the action, such as 'The status changes to **Active**.'"
 
 [[content_types.kb_task.requirements]]
 id = "kb_task_sections"
@@ -510,6 +544,13 @@ severity = "warning"
 summary = "Leave the reason out of error messages."
 fix = "Delete the explanation, and keep what happened plus the next step."
 check = "error_no_why"
+
+[[content_types.ui_microcopy.requirements]]
+id = "ui_error_no_blame"
+section = "10. Document types > Error tone"
+severity = "warning"
+summary = "Make the system or the object the subject of an error, never the reader."
+fix = "Rewrite around what the system could not do, such as 'Couldn't verify the API key.'"
 
 [[content_types.api_doc.requirements]]
 id = "api_endpoint"
