@@ -88,13 +88,13 @@ def test_slugify():
 def test_render_produces_fixed_note_format(workout):
     note = gp.render(workout, "Sprint", "Release Notes", "2026-01-02")
     assert note.startswith("---\ntags: [doc-gym]\nstatus: pending\ndate: 2026-01-02\nintensity: Sprint\n")
-    assert 'focus: "Release Notes"\nsignal_type: release_note\nguide: "Signal 2026-10-06"\n' in note
+    assert 'focus: "Release Notes"\nsignal_type: release_note\nguide: "Signal 2026-10-27"\n' in note
     assert "# Hive Sync Setup" in note
     assert "> **Sprint** · Release Notes · 120-200 words · 15 min" in note
     assert "> **Audience:** beekeepers new to the app" in note
     assert "- Settings > Sensors > Pair" in note
     assert "## Requirements\n- Explain pairing\n- Mention battery level\n" in note
-    assert "Graded against **Signal 2026-10-06** (`github:iiimonfiiire/signal-style-guide@v2026.10.06`)" in note
+    assert "Graded against **Signal 2026-10-27** (`github:iiimonfiiire/signal-style-guide@v2026.10.27`)" in note
     assert note.index("## Requirements") < note.index("## Signal requirements") < note.index("## Draft")
     assert note.rstrip().endswith(gp.PLACEHOLDER)
 

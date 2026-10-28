@@ -229,7 +229,7 @@ def test_deterministic_findings_render_first(monkeypatch):
     ]})
     content, _, _ = ev.grade_note(RN_NOTE)
     evaluation = content[content.index("## Evaluation"):]
-    assert "### Signal findings\nChecked against Signal 2026-10-06 as Release notes (`release_note`)." in evaluation
+    assert "### Signal findings\nChecked against Signal 2026-10-27 as Release notes (`release_note`)." in evaluation
     assert ("- **`contractions`** (error, line 1) – contraction: We've\n  - Quote: `We've`\n"
             "  - Fix: Write 'We have'.") in evaluation
     assert "- **`rn_sections`** (error) – missing heading: Improvements\n  - Fix: Use the six headings" in evaluation
