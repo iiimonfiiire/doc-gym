@@ -1,0 +1,603 @@
+# Signal rules pack: the machine-readable companion to SIGNAL.md.
+# Tools such as PAKT read this file to check prose against Signal.
+# Every rule cites the SIGNAL.md section it comes from, as
+# "<## heading>" or "<## heading> > <### heading or bold lead-in>".
+# A rule with a `check` runs deterministically. A rule without one needs judgment.
+# A `by_type` table changes a rule for a content type, a parent type, or a tag:
+# override `params`, `severity`, `summary`, or `check`, or set `enabled = false`.
+# [content_types.<type>] tables hold the structural requirements of SIGNAL.md section 10.
+# Keep `version` equal to the "Last revision" date in SIGNAL.md.
+
+[guide]
+id = "signal"
+name = "Signal"
+version = "2026-10-06"
+document = "SIGNAL.md"
+format = 1
+description = "Clear, concise, and easy-to-scan writing for UX writing, technical writing, and knowledge management."
+
+# ------------------------------------------------------------ voice and register
+
+[[rules]]
+id = "first_person"
+section = "1. Core identity and register > Voice boundaries"
+severity = "error"
+summary = "Never use first-person pronouns in instructional, procedural, technical, or knowledge management documents."
+fix = "Rewrite with 'you' and an imperative verb, or name the product as the subject."
+check = "first_person"
+[rules.by_type.corporate_voice]
+enabled = false
+
+[[rules]]
+id = "second_person"
+section = "6. Voice and grammar > Second person"
+severity = "error"
+summary = "Address the reader as 'you' with an imperative verb in every instructional sentence."
+fix = "Rewrite as an instruction to 'you'."
+check = "second_person"
+
+[[rules]]
+id = "preamble"
+section = "1. Core identity and register > Directness"
+severity = "warning"
+summary = "State the conclusion first. No throat-clearing openers or chatty closers."
+fix = "Delete the opener or closer and start with the point."
+check = "preamble"
+
+[[rules]]
+id = "hedging"
+section = "1. Core identity and register > Directness"
+severity = "warning"
+summary = "Be blunt. Minimize hedging language."
+fix = "Delete the softener and state the point."
+check = "hedging"
+
+[[rules]]
+id = "conclusion_first"
+section = "1. Core identity and register > Directness"
+severity = "warning"
+summary = "Lead with the conclusion or the action the reader needs."
+
+[[rules]]
+id = "no_humor"
+section = "1. Core identity and register > Humor"
+severity = "warning"
+summary = "No jokes, asides, or rhetorical flourishes."
+
+[[rules]]
+id = "formality"
+section = "1. Core identity and register > Formality"
+severity = "suggestion"
+summary = "Stay professional and polished, without slang or colloquialisms."
+
+# ------------------------------------------------------- punctuation and syntax
+
+[[rules]]
+id = "oxford_comma"
+section = "2. Punctuation and syntax > Oxford comma"
+severity = "error"
+summary = "Use the Oxford comma in every list of three or more."
+fix = "Add a comma before the final 'and' or 'or'."
+check = "oxford_comma"
+
+[[rules]]
+id = "semicolons"
+section = "2. Punctuation and syntax > Semicolons"
+severity = "error"
+summary = "Never use a semicolon in UX copy, UI error messages, or step-by-step procedural instructions."
+fix = "Split the clause into its own sentence or step."
+check = "semicolons"
+params = { scope = "steps" }
+[rules.by_type.ui_microcopy]
+params = { scope = "all" }
+
+[[rules]]
+id = "semicolon_use"
+section = "2. Punctuation and syntax > Semicolons"
+severity = "suggestion"
+summary = "Use a semicolon only to join two closely related independent clauses, never as decoration or a stand-in for a period."
+
+[[rules]]
+id = "em_dash"
+section = "2. Punctuation and syntax > Em dash"
+severity = "warning"
+summary = "Use an em dash only for a mid-sentence tone shift, with no spaces around it."
+fix = "Remove the spaces, or use a period, comma, or colon instead."
+check = "em_dash"
+
+[[rules]]
+id = "bold_leadin"
+section = "2. Punctuation and syntax > En dash"
+severity = "warning"
+summary = "A bold lead-in term in a bullet takes an en dash, never a colon or period."
+fix = "Replace the punctuation after the bold term with an en dash."
+check = "bold_leadin"
+
+[[rules]]
+id = "ampersand"
+section = "2. Punctuation and syntax > Ampersands"
+severity = "error"
+summary = "Never use an ampersand in technical writing."
+fix = "Write 'and'."
+check = "ampersand"
+
+[[rules]]
+id = "latin_abbrev"
+section = "2. Punctuation and syntax > Latin abbreviations"
+severity = "warning"
+summary = "Follow 'e.g.' and 'i.e.' with a comma."
+fix = "Add a comma after the abbreviation."
+check = "latin_abbrev"
+
+[[rules]]
+id = "latin_abbrev_meaning"
+section = "2. Punctuation and syntax > Latin abbreviations"
+severity = "suggestion"
+summary = "Use 'e.g.' for an example and 'i.e.' for a restatement, never interchangeably."
+
+# -------------------------------------------------------------------- citations
+
+[[rules]]
+id = "citations"
+section = "3. Attribution and citations > Web and Markdown documents"
+severity = "warning"
+summary = "Cite web sources with descriptive hyperlinks. Footnote markers are deprecated for the web, and inline parenthetical citations are never allowed."
+fix = "Link descriptive anchor text to the source instead."
+check = "citations"
+
+[[rules]]
+id = "citations_print"
+section = "3. Attribution and citations > PDF and print outputs"
+severity = "suggestion"
+summary = "In PDF and print outputs only, cite every sourced claim with a numbered footnote or endnote."
+
+# ---------------------------------------------------------------- numbers, terms
+
+[[rules]]
+id = "numerals"
+section = "4. Numerals"
+severity = "warning"
+summary = "Spell out zero through nine in prose. Use numerals for 10 and above and for every technical value."
+
+[[rules]]
+id = "one_term_per_concept"
+section = "5. Terminology > One term per concept"
+severity = "error"
+summary = "Use one preferred term per concept, and hold it for the whole document."
+
+# ------------------------------------------------------------- voice and grammar
+
+[[rules]]
+id = "passive_voice"
+section = "6. Voice and grammar > Voice"
+severity = "warning"
+summary = "Use active voice unless the actor is unknown or irrelevant."
+fix = "Name the actor and make it the subject."
+check = "passive_voice"
+params = { max_agentless = 1 }
+
+[[rules]]
+id = "contractions"
+section = "6. Voice and grammar > Contractions"
+severity = "error"
+summary = "Never use contractions, except in UI microcopy."
+fix = "Expand the contraction."
+check = "contractions"
+[rules.by_type.ui_microcopy]
+enabled = false
+
+[[rules]]
+id = "sentence_length"
+section = "6. Voice and grammar > Sentence length"
+severity = "error"
+summary = "Cap sentences by content type: 12 words for UX microcopy, 20 for procedures and everything else, 28 for conceptual overviews."
+fix = "Split the sentence, or turn the logic into a list or a table."
+check = "sentence_length"
+params = { max_words = 20 }
+[rules.by_type.ui_microcopy]
+params = { max_words = 12 }
+[rules.by_type.conceptual]
+params = { max_words = 28 }
+
+[[rules]]
+id = "complex_dependencies"
+section = "6. Voice and grammar > Sentence length"
+severity = "warning"
+summary = "Convert complex logical dependencies that exceed the sentence cap into a bulleted list or a table."
+
+[[rules]]
+id = "back_reference"
+section = "6. Voice and grammar > Flow"
+severity = "warning"
+summary = "Never refer back with phrases such as 'as mentioned above' or 'the second option'."
+fix = "Name the thing again instead of pointing back to it."
+check = "back_reference"
+
+[[rules]]
+id = "filler"
+section = "6. Voice and grammar > Forbidden words"
+severity = "warning"
+summary = "Use plain, precise language. Cut filler phrases."
+fix = "Delete the phrase, or use the shorter form."
+check = "filler"
+
+[[rules]]
+id = "plain_language"
+section = "6. Voice and grammar > Forbidden words"
+severity = "suggestion"
+summary = "Prefer the simpler word whenever it says the same thing."
+
+[[rules]]
+id = "full_sentences"
+section = "6. Voice and grammar > Sentence structure"
+severity = "suggestion"
+summary = "Write full sentences. Fragments belong only in definition-style bullets."
+
+# ------------------------------------------------------- technical conventions
+
+[[rules]]
+id = "acronyms"
+section = "7. Technical conventions > Acronyms"
+severity = "warning"
+summary = "Spell out an acronym on first use, unless the audience is clearly expert."
+
+[[rules]]
+id = "monospace"
+section = "7. Technical conventions > Monospace"
+severity = "error"
+summary = "Put code, commands, filenames, and literal identifiers in backticks."
+
+[[rules]]
+id = "ui_bold"
+section = "7. Technical conventions > UI elements"
+severity = "warning"
+summary = "Bold button, field, and menu names in running text."
+
+[[rules]]
+id = "security_identifiers"
+section = "7. Technical conventions > Security identifiers"
+severity = "error"
+summary = "Write CVE IDs in full, pair a CVSS score with its version, and capitalize severity tiers."
+
+[[rules]]
+id = "emphasis"
+section = "7. Technical conventions > Emphasis"
+severity = "suggestion"
+summary = "Use bold for key terms and italics only for rare, genuine emphasis."
+
+# ------------------------------------------------------------------ capitalization
+
+[[rules]]
+id = "heading_case"
+section = "8. Capitalization > Titles and headings"
+severity = "warning"
+summary = "Write titles and headings in sentence case."
+fix = "Lowercase every word except the first and proper nouns."
+check = "heading_case"
+
+[[rules]]
+id = "ui_case"
+section = "8. Capitalization > UI text"
+severity = "warning"
+summary = "Write labels, tooltips, buttons, and modal titles in sentence case. Title Case belongs to top-level navigation only."
+fix = "Lowercase every word except the first and proper nouns."
+check = "ui_case"
+params = { kinds = ["button", "label", "tooltip", "title", "placeholder"] }
+
+[[rules]]
+id = "code_casing"
+section = "8. Capitalization > Code-style casing"
+severity = "suggestion"
+summary = "Reserve camelCase, PascalCase, and snake_case for code identifiers."
+
+[[rules]]
+id = "all_caps"
+section = "8. Capitalization > All caps"
+severity = "warning"
+summary = "Never use all caps for emphasis. Use bold. HTTP methods are the exception."
+fix = "Use sentence case, and bold the word if it needs emphasis."
+check = "all_caps"
+
+# ------------------------------------------------------------------- formatting
+
+[[rules]]
+id = "scannable_structure"
+section = "9. Formatting and visual hierarchy > Structure"
+severity = "warning"
+summary = "Use clear headings and a logical hierarchy. Avoid walls of text."
+
+[[rules]]
+id = "list_types"
+section = "9. Formatting and visual hierarchy > Lists"
+severity = "warning"
+summary = "Use numbered lists only for ordered steps, and bullets for everything else."
+
+[[rules]]
+id = "callouts"
+section = "9. Formatting and visual hierarchy > Blockquotes and callouts"
+severity = "suggestion"
+summary = "Use blockquotes for quotations only, and callouts for notes and warnings."
+
+[[rules]]
+id = "tables"
+section = "9. Formatting and visual hierarchy > Tables"
+severity = "suggestion"
+summary = "Use tables only for tabular or numeric data."
+
+[[rules]]
+id = "link_text"
+section = "9. Formatting and visual hierarchy > Hyperlinks"
+severity = "error"
+summary = "Write descriptive link text. Never use 'click here'."
+fix = "Use link text that names the destination."
+check = "link_text"
+
+# =============================================== 10. Document types: requirements
+
+[[content_types.kb_article.requirements]]
+id = "kb_numbered_steps"
+section = "9. Formatting and visual hierarchy > Lists"
+severity = "error"
+summary = "Write ordered steps as a numbered list."
+fix = "Turn the bulleted steps into a numbered list."
+check = "steps_numbered"
+
+[[content_types.kb_task.requirements]]
+id = "kb_task_sections"
+section = "10. Document types > Knowledge base articles"
+severity = "error"
+summary = "A task-based guide has a goal or summary, prerequisites, a procedure, and verification, in that order."
+fix = "Add the missing section, or move the sections into that order."
+check = "section_order"
+[content_types.kb_task.requirements.params]
+sections = [
+  { name = "Goal or summary", intro = true, match = ["goal", "summary", "overview"] },
+  { name = "Prerequisites", match = ["prerequisite", "before you begin", "requirements"] },
+  { name = "Procedure", numbered = true, match = ["procedure", "steps"] },
+  { name = "Verification", match = ["verif", "confirm", "check the result", "result"] },
+]
+
+[[content_types.kb_concept.requirements]]
+id = "kb_concept_sections"
+section = "10. Document types > Knowledge base articles"
+severity = "error"
+summary = "A conceptual article has a summary, core concepts, an architecture section or diagram, and related tasks, in that order."
+fix = "Add the missing section, or move the sections into that order."
+check = "section_order"
+[content_types.kb_concept.requirements.params]
+sections = [
+  { name = "Summary", intro = true, match = ["summary", "overview"] },
+  { name = "Core concepts", match = ["concept", "key terms", "how it works"] },
+  { name = "Architecture or diagram", match = ["architecture", "diagram"], markers = ["![", "```mermaid"] },
+  { name = "Related tasks", match = ["related"] },
+]
+
+[[content_types.kb_troubleshooting.requirements]]
+id = "ts_sections"
+section = "10. Document types > Troubleshooting guides"
+severity = "error"
+summary = "A troubleshooting guide has a symptom, a cause, and a resolution, in that order."
+fix = "Add the missing section, or move the sections into that order."
+check = "section_order"
+[content_types.kb_troubleshooting.requirements.params]
+sections = [
+  { name = "Symptom", match = ["symptom"] },
+  { name = "Cause", match = ["cause"] },
+  { name = "Resolution", match = ["resolution", "fix", "solution"] },
+]
+
+[[content_types.kb_troubleshooting.requirements]]
+id = "ts_environment"
+section = "10. Document types > Troubleshooting guides"
+severity = "warning"
+summary = "Add an environment or scope section whenever the issue depends on versions, operating systems, hardware, or configuration."
+fix = "Add an environment or scope section that names the affected versions and platforms."
+check = "environment_section"
+
+[[content_types.walkthrough.requirements]]
+id = "walk_ui_verbs"
+section = "10. Document types > Product walkthroughs"
+severity = "warning"
+summary = "Open each step with a mapped UI verb: click or tap, select, choose, enter, toggle, or drag and drop or hover."
+check = "step_verbs"
+params = { banned = { press = "click", hit = "click", push = "click", type = "enter", input = "enter", tick = "select", pick = "choose", flip = "toggle" } }
+
+[[content_types.walkthrough.requirements]]
+id = "walk_verb_mapping"
+section = "10. Document types > Product walkthroughs"
+severity = "warning"
+summary = "Match each UI verb to its interaction type, and use 'click' for desktop and 'tap' for mobile."
+
+[[content_types.walkthrough.requirements]]
+id = "walk_step_density"
+section = "10. Document types > Product walkthroughs"
+severity = "warning"
+summary = "Build each numbered step around a major UI state change, a form completion, or a page transition, never one click per step."
+
+[[content_types.walkthrough.requirements]]
+id = "walk_inline_actions"
+section = "10. Document types > Product walkthroughs"
+severity = "suggestion"
+summary = "Combine closely coupled, low-friction actions in one step."
+
+[[content_types.concept_guide.requirements]]
+id = "learn_no_procedures"
+section = "10. Document types > Learning and development content"
+severity = "error"
+summary = "A concept guide holds theory and mental models only, with no procedures."
+fix = "Move the steps into a tutorial or a task-based guide, and link to it."
+check = "no_procedures"
+
+[[content_types.tutorial.requirements]]
+id = "learn_tutorial_sections"
+section = "10. Document types > Learning and development content"
+severity = "error"
+summary = "A tutorial opens with learning objectives, covers concepts before procedures, and closes with verification."
+fix = "Add the missing part, or move the parts into that order."
+check = "section_order"
+[content_types.tutorial.requirements.params]
+sections = [
+  { name = "Learning objectives", match = ["objective", "what you will learn", "goals"], markers = ["By the end of this tutorial"] },
+  { name = "Concepts", match = ["concept", "background", "how it works", "key ideas"] },
+  { name = "Procedures", numbered = true, match = ["procedure", "steps", "build"] },
+  { name = "Verification", match = ["verif", "check your work", "test", "confirm"] },
+]
+
+[[content_types.tutorial.requirements]]
+id = "learn_measurable_objectives"
+section = "10. Document types > Learning and development content"
+severity = "warning"
+summary = "State measurable learning objectives, such as 'By the end of this tutorial, you will be able to...'."
+
+[[content_types.quickstart.requirements]]
+id = "learn_quickstart_no_concepts"
+section = "10. Document types > Learning and development content"
+severity = "warning"
+summary = "A quickstart is streamlined procedural execution with zero conceptual overhead."
+
+[[content_types.release_note.requirements]]
+id = "rn_sections"
+section = "10. Document types > Release notes"
+severity = "error"
+summary = "Group every update under the six mandatory headings, in order: New features, Improvements, Bug fixes, Security updates, API and developer changes, and Deprecations and removals."
+fix = "Use the six headings in that order, and move each change under the right one."
+check = "allowed_headings"
+[content_types.release_note.requirements.params]
+allowed = ["New features", "Improvements", "Bug fixes", "Security updates", "API and developer changes", "Deprecations and removals"]
+required = true
+ordered = true
+slots = { new = "New features", improved = "Improvements", fixed = "Bug fixes", security = "Security updates", api = "API and developer changes", deprecated = "Deprecations and removals" }
+
+[[content_types.release_note.requirements]]
+id = "rn_capability_first"
+section = "10. Document types > Release notes"
+severity = "warning"
+summary = "Describe what the reader can now do, not what engineering built."
+
+[[content_types.release_note.requirements]]
+id = "rn_engineering_framing"
+section = "10. Document types > Release notes"
+severity = "warning"
+summary = "Never frame a change as team output, such as 'We added an API'."
+fix = "Start with the capability, such as 'You can now...' or 'The API now supports...'."
+check = "engineering_framing"
+
+[[content_types.release_note.requirements]]
+id = "rn_deprecation_callout"
+section = "10. Document types > Release notes"
+severity = "error"
+summary = "Announce every deprecation in a Warning callout that names an end-of-life date and a migration path."
+fix = "Wrap the deprecation in a '> **Warning:**' callout with the date and the replacement or a migration guide link."
+check = "deprecation_callout"
+params = { section = ["deprecation"] }
+
+[[content_types.release_note.requirements]]
+id = "rn_deprecation_fields"
+section = "10. Document types > Release notes"
+severity = "error"
+summary = "Each deprecation callout states the feature name, the end-of-life date, the impact or reason, and the migration path."
+
+[[content_types.ui_microcopy.requirements]]
+id = "ui_error_two_part"
+section = "10. Document types > UX copy"
+severity = "error"
+summary = "Every error message says what happened, then gives an actionable next step."
+
+[[content_types.ui_microcopy.requirements]]
+id = "ui_error_no_why"
+section = "10. Document types > UX copy"
+severity = "warning"
+summary = "Leave the reason out of error messages."
+fix = "Delete the explanation, and keep what happened plus the next step."
+check = "error_no_why"
+
+[[content_types.api_doc.requirements]]
+id = "api_endpoint"
+section = "10. Document types > API documentation"
+severity = "error"
+summary = "Write HTTP methods in uppercase with the full path syntax."
+fix = "Write the endpoint as `GET /v1/resource/{id}`."
+check = "endpoint_signature"
+
+[[content_types.api_doc.requirements]]
+id = "api_params_table"
+section = "10. Document types > API documentation"
+severity = "error"
+summary = "List parameters in a four-column table: Parameter, Type, Required or optional, and Description."
+fix = "Use the columns Parameter, Type, Required or optional, and Description."
+check = "params_table"
+params = { columns = ["parameter", "type", "required or optional", "description"] }
+
+[[content_types.api_doc.requirements]]
+id = "api_required_marker"
+section = "10. Document types > API documentation"
+severity = "warning"
+summary = "Mark required fields with an explicit badge or an asterisk."
+fix = "Write 'Required' or 'Optional', or mark the parameter name with an asterisk."
+check = "required_marker"
+
+[[content_types.api_doc.requirements]]
+id = "api_code_samples"
+section = "10. Document types > API documentation"
+severity = "warning"
+summary = "Provide code samples for cURL and the primary languages."
+fix = "Add a cURL sample and at least one language sample."
+check = "code_samples"
+
+[[content_types.api_doc.requirements]]
+id = "api_tabbed_samples"
+section = "10. Document types > API documentation"
+severity = "suggestion"
+summary = "Present the code samples as tabs, one tab per language."
+
+[[content_types.api_doc.requirements]]
+id = "api_masked_tokens"
+section = "10. Document types > API documentation"
+severity = "error"
+summary = "Mask auth tokens in samples as Bearer <TOKEN>."
+fix = "Replace the token with `<TOKEN>`."
+check = "masked_tokens"
+
+[[content_types.api_doc.requirements]]
+id = "api_response_schemas"
+section = "10. Document types > API documentation"
+severity = "error"
+summary = "Include standard JSON success and error response schemas."
+fix = "Add a JSON success response and a JSON error response."
+check = "response_schemas"
+
+[[content_types.api_doc.requirements]]
+id = "api_spec_alignment"
+section = "10. Document types > API documentation"
+severity = "warning"
+summary = "Structure the page so it maps directly to the OpenAPI or Swagger spec."
+
+[[content_types.gtm_brief.requirements]]
+id = "gtm_sections"
+section = "10. Document types > GTM and product handoff briefs"
+severity = "error"
+summary = "Use the five mandatory sections, in order: target persona and pain point, value proposition, technical capabilities and scope, known limitations and edge cases, and competitive differentiators."
+fix = "Add the missing section, or move the sections into that order."
+check = "section_order"
+[content_types.gtm_brief.requirements.params]
+sections = [
+  { name = "Target persona and pain point", match = ["persona", "pain point"] },
+  { name = "Value proposition", match = ["value proposition"] },
+  { name = "Technical capabilities and scope", match = ["capabilit", "scope"] },
+  { name = "Known limitations and edge cases", match = ["limitation", "edge case"] },
+  { name = "Competitive differentiators", match = ["differentiat", "competit"] },
+]
+
+[[content_types.gtm_brief.requirements]]
+id = "gtm_codename"
+section = "10. Document types > GTM and product handoff briefs"
+severity = "error"
+summary = "Allow an internal codename only in a single metadata line at the top of the brief."
+fix = "Keep the codename in the 'Internal codename:' line, and use the official product name everywhere else."
+check = "codename_line"
+
+[[content_types.gtm_brief.requirements]]
+id = "gtm_branding"
+section = "10. Document types > GTM and product handoff briefs"
+severity = "warning"
+summary = "Use official product and feature branding only in body copy and headers."

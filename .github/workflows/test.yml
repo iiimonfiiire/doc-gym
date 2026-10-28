@@ -13,6 +13,31 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Read the PAKT pin
+        id: pin
+        run: echo "ref=$(grep -E '^PAKT_REF=' pakt.lock | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+      # PAKT is private for now. Checking it out needs a PAKT_READ_TOKEN secret: a fine-grained token with
+      # read-only Contents access to the PAKT repo. Without it, this step fails softly and the PAKT tests skip.
+      # Once PAKT is public, the default token works and the secret can go.
+      - name: Check out PAKT at the pin
+        id: pakt
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: iiimonfiiire/pakt
+          ref: ${{ steps.pin.outputs.ref }}
+          path: pakt-src
+          token: ${{ secrets.PAKT_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Vendor PAKT
+        run: |
+          if [ "${{ steps.pakt.outcome }}" = success ]; then
+            mkdir -p vendor
+            cp -R pakt-src/pakt pakt-src/content-types.toml vendor/
+          else
+            echo "::warning::PAKT checkout failed, so the Signal tests skip. Add a PAKT_READ_TOKEN secret, or make PAKT public."
+          fi
+          rm -rf pakt-src
       - uses: actions/setup-python@v5
         with:
           # The server runs Ubuntu 24.04's system Python.
@@ -24,4 +49,6 @@ jobs:
         run: ruff check .
       - name: Test
         # shellcheck is preinstalled on GitHub's Ubuntu runners, so the shell script checks run too.
+        env:
+          DOC_GYM_REQUIRE_PAKT: ${{ steps.pakt.outcome == 'success' && '1' || '0' }}
         run: pytest

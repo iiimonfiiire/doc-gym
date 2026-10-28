@@ -8,3 +8,7 @@ __pycache__/
 .ruff_cache/
 
 cache/
+
+# PAKT, vendored by ops/vendor-pakt.sh
+vendor/
+vendor.new/

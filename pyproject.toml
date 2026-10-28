@@ -1,11 +1,12 @@
-# Tool config only. The scripts are stdlib-only and not packaged.
+# Tool config only. The scripts are stdlib-only and not packaged. PAKT is vendored into vendor/.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
+extend-exclude = ["vendor"]
 line-length = 130
 
 [tool.ruff.lint]

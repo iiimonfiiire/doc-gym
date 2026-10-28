@@ -29,8 +29,9 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import signal_guide
 from common import PROJECT_DIR, DocGymError, env, load_env, ollama_url
-from evaluate_draft import grade_note
+from evaluate_draft import MAX_SCORE, grade_note
 from generate_prompt import FOCUS, PROMPT_VERSION, ThinOutput, check_choice, make_workout, render_note
 
 MAX_BODY = 1_000_000
@@ -212,7 +213,7 @@ class Handler(BaseHTTPRequestHandler):
                     buffer.request(focus)
                     ready = buffer.ready()
                     return self._send(503, {
-                        "error": f"No {focus} workout is ready yet. It's being prepared now (about 3 minutes). "
+                        "error": f"No {focus} workout is ready yet. It is next in line (a few minutes). "
                                  f"Ready now: {', '.join(ready) if ready else 'none yet'}.",
                         "ready": ready,
                     })
@@ -225,7 +226,7 @@ class Handler(BaseHTTPRequestHandler):
                     log.info("Buffer: kept %s from a dropped request", focus)
             elif self.path == "/evaluate":
                 content, grade, total = grade_note(str(data.get("content") or ""))
-                self._send(200, {"content": content, "grade": grade, "score": f"{total}/30"})
+                self._send(200, {"content": content, "grade": grade, "score": f"{total}/{MAX_SCORE}"})
             else:
                 self._send(404, {"error": "Not found"})
         except DocGymError as e:
@@ -253,6 +254,18 @@ def create_server(host: str, port: int, buffer: WorkoutBuffer | None = None) -> 
     return server
 
 
+def warm_guide() -> bool:
+    """Load the style guide once at startup, so the first request doesn't pay for the download.
+    Without the guide, workouts render without Signal requirements and grading fails, until it loads."""
+    try:
+        sig = signal_guide.load()
+    except DocGymError as e:
+        log.warning("Style guide not loaded: %s", e)
+        return False
+    log.info("Style guide: %s from %s", sig.label, sig.source)
+    return True
+
+
 def main() -> None:
     load_env()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -263,6 +276,7 @@ def main() -> None:
         cache = Path(env("DOC_GYM_CACHE_DIR", str(PROJECT_DIR / "cache"))).expanduser()
         buffer = WorkoutBuffer(cache / "buffer.json")
         threading.Thread(target=buffer.run, name="buffer-refill", daemon=True).start()
+    threading.Thread(target=warm_guide, name="guide-warmup", daemon=True).start()
     host, port = parse_bind(env("DOC_GYM_BIND", DEFAULT_BIND))
     server = create_server(host, port, buffer)
     log.info("Doc Gym service on %s:%s, Ollama at %s, buffer %s", host, port, ollama_url(),

@@ -29,6 +29,8 @@ Doc Gym is a single-user, self-hosted tool. One person runs the service on their
 - **Error responses** carry user-facing messages only. Stack traces go to the service log.
 - **Secrets** (Groq and Gemini keys, the service token) live only in `.env`, which is gitignored and `chmod 600`. The Groq and Gemini keys never reach the vault.
 - **Least privilege.** The service runs as a systemd user service, not as root.
+- **Outbound calls.** Besides Groq and Gemini, the server makes HTTPS requests to `raw.githubusercontent.com` for the Signal rules pack and prose, through PAKT. The guide is pinned to a release tag, so PAKT downloads it once and then reads its cache under `~/.cache/pakt`. The service only reads the rules pack as TOML and runs PAKT's built-in checks on it. It runs no code from the guide.
+- **Vendored PAKT.** `ops/deploy-server.sh` fetches PAKT at the full commit SHA in `pakt.lock` on your desktop, and copies it to the server. The server needs no GitHub credentials. Doc Gym imports only PAKT's stdlib-only modules, never its model-review path.
 
 ## Rotating the token
 
